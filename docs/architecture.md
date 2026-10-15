@@ -39,3 +39,31 @@ Official contexts is a list of strings, not retrieval objects. Source and score 
 - Chunking, retrieval/reranking, thresholds, prompts, answer style, and context limits are not prescribed. top_k=3 is only the team interface default.
 - There is no machine-readable schema or stated behavior for malformed JSON, unknown keys, duplicate IDs, or empty lists.
 - The example has concise/ellipsized context display while the brief permits cleaned/raw source pieces. This contract uses exact original excerpts; a different trimming policy needs team agreement.
+
+## P06 evidence grounding
+
+`generate_answer(question, contexts, history=None)` keeps its existing interface.
+The local Ollama model selects exact, complete-line Arabic excerpts using JSON
+with a supported/abstain status and evidence IDs. The generator validates every
+selection against its referenced current retrieval text and returns only those
+excerpts, with duplicate selections removed. It rejects malformed output,
+unsupported text, missing evidence, and partial-line selections with the Arabic
+insufficient-evidence reply. Retrieval inputs and original excerpt strings are
+never modified. No extra model, dependency, or network service is introduced.
+
+The system policy requires abstention for irrelevant, insufficient, conflicting,
+or ambiguous evidence, and requires coverage of every requested service and
+question part. Fees, documents, eligibility, deadlines, and procedures must be
+explicitly stated for the requested service and case. History is serialized as
+conversation-only data without prior context excerpts or assistant chat roles.
+Retrieved text is also serialized as untrusted data; embedded instructions must
+not be followed. Source filenames and ranking scores are not factual evidence.
+
+This deliberately favors verbatim answers over fluent synthesis. Exact matching
+prevents newly invented wording, but does not prove relevance, full coverage,
+absence of contradictory passages, or safe interpretation of injected text.
+Those semantic decisions still depend on the local model and retrieval quality;
+zero hallucinations are not guaranteed. Mocked tests verify boundary handling,
+output validation and policy construction, not real-model semantic reliability.
+The caller still owns mapping actually used source excerpts to official contexts;
+the string-only generation API does not expose selection IDs to that mapper.
