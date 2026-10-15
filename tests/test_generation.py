@@ -51,7 +51,10 @@ def test_generation_uses_explicit_model_and_exact_evidence(monkeypatch):
     assert payload["conversation_context_only"] == [
         {"question": "أريد تجديد البطاقة", "answer": "حسناً"}
     ]
-    assert payload["evidence"] == [{"evidence_id": 1, "text": "الرسوم 2 دينار"}]
+    assert payload["evidence"] == [{
+        "evidence_id": 1, "source": "id_card_renewal.txt", "text": "الرسوم 2 دينار",
+        "lines": ["الرسوم 2 دينار"]
+    }]
 
 
 def test_missing_model_never_falls_back(monkeypatch):
@@ -248,3 +251,19 @@ def test_correct_quote_with_invented_addition_is_rejected(mock_model):
     assert generation.generate_answer(
         "كم الرسوم وكيف أقدم؟", [{"text": "الرسوم 2 دينار"}]
     ) == generation.NO_CONTEXT_MESSAGE
+
+
+@pytest.mark.parametrize("start,end", [(0, 1), (1, 9), (2, 1), (True, 1), ("1", 1)])
+def test_invalid_line_selection_abstains(mock_model, start, end):
+    mock_model({"status": "supported", "excerpts": [
+        {"evidence_id": 1, "start_line": start, "end_line": end}
+    ]})
+    assert generation.generate_answer("سؤال", [{"text": "الرسوم 2 دينار\n"}]) == generation.NO_CONTEXT_MESSAGE
+
+
+def test_line_selection_preserves_original_whitespace_and_numbering(mock_model):
+    text = "الوثائق المطلوبة\t1. دفتر العائلة\n2. البطاقة الشخصية  \n"
+    mock_model({"status": "supported", "excerpts": [
+        {"evidence_id": 1, "start_line": 1, "end_line": 2}
+    ]})
+    assert generation.generate_answer("ما الوثائق؟", [{"text": text}]) == text
