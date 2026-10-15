@@ -104,6 +104,8 @@ Organizer-provided documents and practice questions may be distributed separatel
 
 ## 🚀 Installation
 
+Complete installation while internet access is available. Run setup and evaluation commands from the project root; reuse an existing configured `.venv`.
+
 ### 1. Clone the Repository
 
 ```bash
@@ -127,6 +129,8 @@ python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 ```
 
+If Ubuntu reports that venv is unavailable, install its `python3-venv` package first.
+
 ### 3. Install Dependencies
 
 ```bash
@@ -137,7 +141,7 @@ python -m pip install -r requirements.txt
 
 Install Ollama from:
 
-https://ollama.com
+[Official Linux instructions](https://docs.ollama.com/linux) or [Ollama downloads](https://ollama.com). The local server must be available at `http://localhost:11434`.
 
 Ensure the organizer-provided model is available locally:
 
@@ -157,7 +161,7 @@ Start Ollama if it is not already running:
 ollama serve
 ```
 
-The model must already be installed or provided by the hackathon organizers.
+The model must already be installed or provided by the hackathon organizers. Verify the exact tag in `ollama list`; do not substitute another model. Export the model setting in the same terminal used to run the CLI or demo.
 
 ### 5. Configure the Model
 
@@ -177,19 +181,20 @@ $env:OLLAMA_MODEL="command-r7b-arabic:7b"
 
 ## 📚 Government Service Documents
 
-The system uses the Arabic government-service documents supplied by the hackathon organizers.
-
-For the practice participant pack, the expected directory structure is:
+Place the 12 original service TXT files in `data/` beside `main.py`. Alternatively, keep the supplied package layout:
 
 ```text
-hackathon_participant_pack/
-└── participant_pack/
-    ├── questions.json
-    └── data/
-        └── *.txt
+hackathon_participant_pack/participant_pack/data/*.txt
+hackathon_participant_pack/participant_pack/questions.json
 ```
 
-Keep the original Arabic document content intact.
+The CLI selects one complete, readable UTF-8 corpus of the 12 official service TXT filenames in this order:
+
+1. `--documents path/to/data`, or `GOVERNMENT_RAG_DATA_DIR` when the flag is omitted, if valid.
+2. `data/` beside the supplied questions file.
+3. The project's `docs/` directory, if it contains the official TXT corpus.
+
+Invalid candidates are skipped; if none is valid, the CLI fails with the paths checked. It never combines datasets or ingests unrelated TXT or architecture files. User-supplied paths are relative to the current working directory; repository defaults are relative to the code directory. Preserve filenames and original text. Organizer files are excluded from Git and must be supplied separately on a fresh checkout.
 
 ---
 
@@ -209,7 +214,14 @@ For the supplied practice questions:
 python main.py hackathon_participant_pack/participant_pack/questions.json
 ```
 
-The CLI generates a UTF-8 `answers.json` file beside the input JSON file.
+The CLI accepts any explicit questions path, including `participant_pack/questions.json`, and reports resolved input, corpus, sibling `answers_example.json` (if present), and output paths. It never modifies questions or reference examples.
+
+The CLI writes UTF-8 `answers.json` **beside the input file**, replacing any prior output there. Root `questions.json` produces root `answers.json`; the nested practice command produces `hackathon_participant_pack/participant_pack/answers.json`. A root copy of the practice output is not refreshed by the nested command.
+
+Input is an object containing `chats`, each with `chat_id` and `messages`; each message contains `message_id` and a string `question`. Output preserves these fields and adds an Arabic string `answer` and a list of exact source-text strings `contexts` to every message. Abstentions and local model failures have empty contexts. See `docs/contracts.md` for the full interface contract.
+
+After dependencies and the model are installed, execution is fully offline: requests go only to local Ollama, with no cloud APIs or runtime downloads. History stays within each chat. The model selects source lines, which Python copies verbatim. Relevance and completeness still depend on retrieval and model judgment; service-free follow-ups can abstain. Local model errors appear on stderr. `OLLAMA_TIMEOUT_SECONDS` optionally overrides the default 45-second timeout.
+
 
 ### Output Format
 
@@ -243,7 +255,7 @@ When supporting evidence is unavailable or the local model fails, the system pro
 
 ## 🖥️ Streamlit Frontend
 
-The project includes an optional Streamlit interface for interactive demonstrations.
+The project includes `app.py`, an optional Streamlit demo using the existing retrieval and generation APIs. Activate the same environment and model setting first. To select its corpus explicitly, set `GOVERNMENT_RAG_DATA_DIR` to the official TXT directory (for example, `hackathon_participant_pack/participant_pack/data`). The demo displays retrieved evidence; the CLI performs the official used-evidence mapping and writes the evaluation JSON.
 
 Run:
 
@@ -263,7 +275,7 @@ The frontend provides an interactive way to demonstrate the chatbot.
 
 ## 🧪 Testing
 
-Run the automated tests:
+In the activated environment, install `pytest` beforehand if needed (it is not listed in runtime requirements), then run:
 
 ```bash
 python -m pytest -q

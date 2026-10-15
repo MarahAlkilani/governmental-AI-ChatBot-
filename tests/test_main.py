@@ -128,7 +128,7 @@ def test_failed_turn_does_not_stop_later_messages(monkeypatch, failure):
     assert histories[-1] == []
 
 
-def test_cli_writes_utf8_beside_input_and_preserves_input(tmp_path, monkeypatch):
+def test_cli_writes_utf8_beside_input_and_preserves_input(tmp_path, monkeypatch, cli_dataset):
     folder = tmp_path / "inputs"
     folder.mkdir()
     input_path = folder / "questions.json"
@@ -138,7 +138,7 @@ def test_cli_writes_utf8_beside_input_and_preserves_input(tmp_path, monkeypatch)
     monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(main, "retrieve", lambda *a, **k: [{"text": "الرسوم 2 دينار"}])
     monkeypatch.setattr(main, "generate_answer", lambda *a: "الرسوم 2 دينار")
-    assert main.main([str(input_path)]) == 0
+    assert main.main([str(input_path), "--documents", str(cli_dataset)]) == 0
     raw = (folder / "answers.json").read_text(encoding="utf-8")
     result = json.loads(raw)
     assert "الرسوم" in raw
@@ -172,11 +172,11 @@ def test_missing_file_invalid_json_and_encoding(tmp_path, contents, capsys):
     assert capsys.readouterr().err
 
 
-def test_output_write_failure_is_reported(tmp_path, capsys):
+def test_output_write_failure_is_reported(tmp_path, capsys, cli_dataset):
     path = tmp_path / "questions.json"
     path.write_text('{"chats": []}', encoding="utf-8")
     (tmp_path / "answers.json").mkdir()
-    assert main.main([str(path)]) == 1
+    assert main.main([str(path), "--documents", str(cli_dataset)]) == 1
     assert capsys.readouterr().err
 
 
@@ -191,7 +191,7 @@ def test_cli_requires_input_argument():
     assert exc.value.code == 2
 
 
-def test_real_retrieval_and_generation_pipeline_with_mocked_ollama(tmp_path, monkeypatch):
+def test_real_retrieval_and_generation_pipeline_with_mocked_ollama(tmp_path, monkeypatch, official_corpus):
     import generation
     from types import SimpleNamespace
 
@@ -216,7 +216,7 @@ def test_real_retrieval_and_generation_pipeline_with_mocked_ollama(tmp_path, mon
     monkeypatch.setattr(generation, "ollama", SimpleNamespace(Client=Client))
     path = tmp_path / "questions.json"
     path.write_text(json.dumps(questions([question]), ensure_ascii=False), encoding="utf-8")
-    assert main.main([str(path)]) == 0
+    assert main.main([str(path), "--documents", str(official_corpus[1])]) == 0
     result = json.loads((tmp_path / "answers.json").read_text(encoding="utf-8"))
     message = result["chats"][0]["messages"][0]
     assert message["answer"] == evidence[0]["text"]
@@ -224,7 +224,7 @@ def test_real_retrieval_and_generation_pipeline_with_mocked_ollama(tmp_path, mon
     assert calls[0]["model"] == "offline-test-model"
 
 
-def test_script_entrypoint_runs_offline(tmp_path):
+def test_script_entrypoint_runs_offline(tmp_path, cli_dataset):
     from pathlib import Path
     import subprocess
     import sys
@@ -232,7 +232,8 @@ def test_script_entrypoint_runs_offline(tmp_path):
     path = tmp_path / "questions.json"
     path.write_text('{"chats": []}', encoding="utf-8")
     result = subprocess.run(
-        [sys.executable, str(Path(main.__file__).resolve()), str(path)],
+        [sys.executable, str(Path(main.__file__).resolve()), str(path),
+         "--documents", str(cli_dataset)],
         cwd=tmp_path, capture_output=True, text=True, timeout=15,
     )
     assert result.returncode == 0, result.stderr
@@ -241,12 +242,12 @@ def test_script_entrypoint_runs_offline(tmp_path):
 
 @pytest.mark.parametrize("chat_index", [0, 3])
 def test_official_questions_real_retrieval_preserves_verbatim_contexts(
-    tmp_path, monkeypatch, chat_index
+    tmp_path, monkeypatch, chat_index, official_corpus
 ):
     from pathlib import Path
     from retrieval import retrieve
 
-    official = Path(main.__file__).parent / "hackathon_participant_pack/participant_pack/questions.json"
+    official = official_corpus[0]
     data = json.loads(official.read_text(encoding="utf-8"))
     data = {"chats": [data["chats"][chat_index]]}
     original = deepcopy(data)
@@ -267,7 +268,7 @@ def test_official_questions_real_retrieval_preserves_verbatim_contexts(
     monkeypatch.setattr(main, "generate_answer", generate)
     path = tmp_path / "questions.json"
     path.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
-    assert main.main([str(path)]) == 0
+    assert main.main([str(path), "--documents", str(official_corpus[1])]) == 0
     output = json.loads((tmp_path / "answers.json").read_text(encoding="utf-8"))
     message = output["chats"][0]["messages"][0]
     assert calls == [(question, evidence, [])]
@@ -279,7 +280,7 @@ def test_official_questions_real_retrieval_preserves_verbatim_contexts(
     assert json.loads(path.read_text(encoding="utf-8")) == original
 
 
-def test_model_configuration_failure_reports_reason_with_real_retrieval(monkeypatch, capsys):
+def test_model_configuration_failure_reports_reason_with_real_retrieval(monkeypatch, capsys, official_corpus):
     question = "كم يستغرق تجديد دفتر العائلة؟"
     assert main.retrieve(question, top_k=3)
     monkeypatch.setattr(main, "generate_answer", lambda *a: (
@@ -291,7 +292,7 @@ def test_model_configuration_failure_reports_reason_with_real_retrieval(monkeypa
     assert "OLLAMA_MODEL" in capsys.readouterr().err
 
 
-def test_abstention_with_real_retrieval_does_not_emit_unused_evidence(monkeypatch):
+def test_abstention_with_real_retrieval_does_not_emit_unused_evidence(monkeypatch, official_corpus):
     question = "كم يستغرق تجديد دفتر العائلة؟"
     assert main.retrieve(question, top_k=3)
     monkeypatch.setattr(main, "generate_answer", lambda *a: NO_CONTEXT_MESSAGE)
@@ -300,7 +301,7 @@ def test_abstention_with_real_retrieval_does_not_emit_unused_evidence(monkeypatc
     assert message["contexts"] == []
 
 
-def test_real_retrieval_retains_service_identity_in_generation_payload(monkeypatch):
+def test_real_retrieval_retains_service_identity_in_generation_payload(monkeypatch, official_corpus):
     """A section such as '45 minutes' needs its service filename for routing.
 
     Captured real Ollama behavior: without source identity the model abstained;

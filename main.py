@@ -11,6 +11,7 @@ import sys
 
 from generation import NO_CONTEXT_MESSAGE, generate_answer
 from retrieval import retrieve
+from project_paths import resolve_document_directory, use_document_directory
 
 ERROR_MESSAGE = "تعذر إكمال الإجابة حالياً بسبب خطأ محلي. يرجى المحاولة لاحقاً."
 
@@ -105,15 +106,25 @@ def answer_questions(data: dict) -> dict:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="الإجابة محلياً عن أسئلة الخدمات الحكومية.")
     parser.add_argument("questions", type=Path, help="مسار ملف questions.json")
+    parser.add_argument("--documents", type=Path, help="Explicit official TXT document directory")
     args = parser.parse_args(argv)
+    questions = args.questions.expanduser().resolve()
+    destination = questions.parent / "answers.json"
+    reference = questions.parent / "answers_example.json"
+    print(f"Input questions: {questions}")
+    print(f"Reference example: {reference}" + ("" if reference.is_file() else " (not found)"))
+    print(f"Generated answers: {destination}")
     try:
-        with args.questions.open(encoding="utf-8") as stream:
+        with questions.open(encoding="utf-8") as stream:
             data = json.load(stream)
-        output = answer_questions(data)
+        _validate_input(data)
+        directory = resolve_document_directory(questions, args.documents)
+        print(f"Document directory: {directory}")
+        with use_document_directory(directory):
+            output = answer_questions(data)
         # The evaluation places the input beside main.py. An explicit path also
         # works: answers.json is written beside that input, independent of cwd.
-        destination = args.questions.parent / "answers.json"
-        if destination.resolve() == args.questions.resolve():
+        if destination.resolve() in (questions, reference.resolve()):
             raise ValueError("يجب ألا يكون ملف الإدخال هو answers.json.")
         with destination.open("w", encoding="utf-8") as stream:
             json.dump(output, stream, ensure_ascii=False, indent=2)

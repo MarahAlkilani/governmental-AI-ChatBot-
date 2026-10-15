@@ -134,7 +134,10 @@ class BM25RetrievalTests(unittest.TestCase):
 
 class ParticipantPackRetrievalTests(unittest.TestCase):
     def setUp(self) -> None:
-        self.documents = load_documents()
+        try:
+            self.documents = load_documents()
+        except (OSError, ValueError) as exc:
+            self.skipTest(str(exc))
         self.original_texts = {
             document.filename: document.text for document in self.documents
         }
