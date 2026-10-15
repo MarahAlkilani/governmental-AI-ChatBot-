@@ -1,0 +1,9 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    { "label": "Kashaf: install", "type": "shell", "command": "make install", "problemMatcher": [] },
+    { "label": "Kashaf: run UI", "type": "shell", "command": "make run", "problemMatcher": [] },
+    { "label": "Kashaf: eval", "type": "shell", "command": "make eval", "problemMatcher": [] },
+    { "label": "Kashaf: main.py", "type": "shell", "command": "make main", "problemMatcher": [] }
+  ]
+}
