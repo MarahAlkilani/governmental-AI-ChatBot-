@@ -4,3 +4,4 @@ __pycache__/
 answers.json
 .venv/
 .env
+hackathon_participant_pack/
