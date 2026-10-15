@@ -39,3 +39,59 @@ Official contexts is a list of strings, not retrieval objects. Source and score 
 - Chunking, retrieval/reranking, thresholds, prompts, answer style, and context limits are not prescribed. top_k=3 is only the team interface default.
 - There is no machine-readable schema or stated behavior for malformed JSON, unknown keys, duplicate IDs, or empty lists.
 - The example has concise/ellipsized context display while the brief permits cleaned/raw source pieces. This contract uses exact original excerpts; a different trimming policy needs team agreement.
+
+## P06 evidence grounding
+
+`generate_answer(question, contexts, history=None)` keeps its existing interface.
+The local Ollama model selects exact, complete-line Arabic excerpts using JSON
+with a supported/abstain status, evidence IDs, and inclusive source line ranges.
+Python reconstructs those ranges verbatim; legacy exact-text selections remain
+validated for compatibility. Source filenames identify the service in the prompt,
+while factual content must come from the excerpt text. The generator validates every
+selection against its referenced current retrieval text and returns only those
+excerpts, with duplicate selections removed. It rejects malformed output,
+unsupported text, missing evidence, and partial-line selections with the Arabic
+insufficient-evidence reply. Retrieval inputs and original excerpt strings are
+never modified. No extra model, dependency, or network service is introduced.
+
+The system policy requires abstention for irrelevant, insufficient, conflicting,
+or ambiguous evidence, and requires coverage of every requested service and
+question part. Fees, documents, eligibility, deadlines, and procedures must be
+explicitly stated for the requested service and case. History is serialized as
+conversation-only data without prior context excerpts or assistant chat roles.
+Retrieved text is also serialized as untrusted data; embedded instructions must
+not be followed. Source filenames and ranking scores are not factual evidence.
+
+This deliberately favors verbatim answers over fluent synthesis. Exact matching
+prevents newly invented wording, but does not prove relevance, full coverage,
+absence of contradictory passages, or safe interpretation of injected text.
+Those semantic decisions still depend on the local model and retrieval quality;
+zero hallucinations are not guaranteed. Mocked tests verify boundary handling,
+output validation and policy construction, not real-model semantic reliability.
+The caller still owns mapping actually used source excerpts to official contexts;
+the string-only generation API does not expose selection IDs to that mapper.
+
+## P07 CLI integration
+
+Run `python main.py questions.json` with the project dependencies installed and
+`OLLAMA_MODEL` set to the provided, locally installed model. If using the project
+virtual environment, activate it first or run `.venv/bin/python main.py questions.json`.
+The CLI validates the input structure, processes messages in order, preserves
+all original fields, and writes UTF-8 `answers.json` beside the input file.
+Invalid input or file I/O errors produce a stderr diagnostic and nonzero exit;
+retrieval/generation errors are contained per message with an Arabic fallback.
+
+Each chat object starts with fresh history, even if chat IDs repeat. Retrieval
+receives the original question and `top_k=3`; generation receives those results
+and only completed turns from that chat. There is no history-based query rewrite,
+so service-free follow-up questions can lack evidence and abstain.
+
+Because P06 returns verbatim answer excerpts without source IDs, the output
+mapper matches complete-line answer blocks to current retrieved texts. It emits
+only matching original retrieval strings, deduplicated in retrieval order.
+Abstentions and failures have empty contexts. Untraceable answers are declined.
+If multiple sources contain an identical selected block, the first match is used;
+the string-only generation interface cannot disambiguate that provenance.
+Tests include mocked orchestration, CLI file handling, an actual script launch,
+and real retrieval/generation integration with only Ollama mocked. Real-model
+answer quality and latency are not established by these offline tests.
