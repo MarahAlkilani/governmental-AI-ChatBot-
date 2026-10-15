@@ -1,6 +1,6 @@
 import unittest
 
-from arabic_text import normalize_arabic, tokenize_arabic
+from arabic_text import normalize_arabic, tokenize_arabic, tokenize_for_retrieval
 
 
 class ArabicTextNormalizationTests(unittest.TestCase):
@@ -49,6 +49,16 @@ class ArabicTextNormalizationTests(unittest.TestCase):
 
         self.assertEqual(normalized, "الرسوم 10 دنانير تدفع عند تقديم الطلب")
         self.assertEqual(original, "الرسوم: ١٠ دنانير، تُدفع عند تقديم الطلب.")
+
+    def test_retrieval_tokens_fold_common_colloquial_service_terms(self) -> None:
+        self.assertEqual(
+            tokenize_for_retrieval("وين بقدر أطلع باسبور ضايع؟"),
+            ["مكان", "استطيع", "اطلع", "جواز", "فقدان"],
+        )
+        self.assertEqual(
+            tokenize_for_retrieval("شو الأوراق المطلوبة لتجديد الهوية؟"),
+            ["ماذا", "وثايق", "مطلوبه", "تجديد", "بطاقه"],
+        )
 
 
 if __name__ == "__main__":
