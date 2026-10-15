@@ -18,3 +18,7 @@ python main.py hackathon_participant_pack/participant_pack/questions.json
 Each message receives an Arabic answer and exact source excerpts. Missing evidence or local model failures produce Arabic fallback answers. History remains within each chat. The model selects source line ranges; Python copies those lines verbatim, avoiding formatting-related rejections. Semantic relevance and completeness still depend on retrieval and model judgment.
 
 Run tests with `python -m pytest -q`.
+
+-Marah alkilani
+-Sadeen nababateh
+-Bayan marashdeh
