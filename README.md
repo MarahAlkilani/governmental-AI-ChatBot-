@@ -31,7 +31,13 @@ hackathon_participant_pack/participant_pack/data/*.txt
 hackathon_participant_pack/participant_pack/questions.json
 ```
 
-The loader searches `hackathon_participant_pack/` recursively first and uses root `data/` only when that package contains no TXT files. Use one intended corpus location to avoid unintended duplicate or extra documents. Preserve filenames and original text. Organizer files are excluded from Git and must be supplied separately on a fresh checkout.
+The CLI selects one complete, readable UTF-8 corpus of the 12 official service TXT filenames in this order:
+
+1. `--documents path/to/data`, or `GOVERNMENT_RAG_DATA_DIR` when the flag is omitted, if valid.
+2. `data/` beside the supplied questions file.
+3. The project's `docs/` directory, if it contains the official TXT corpus.
+
+Invalid candidates are skipped; if none is valid, the CLI fails with the paths checked. It never combines datasets or ingests unrelated TXT or architecture files. User-supplied paths are relative to the current working directory; repository defaults are relative to the code directory. Preserve filenames and original text. Organizer files are excluded from Git and must be supplied separately on a fresh checkout.
 
 ## Run
 
@@ -47,6 +53,8 @@ For the supplied practice input:
 ```bash
 python main.py hackathon_participant_pack/participant_pack/questions.json
 ```
+
+The CLI accepts any explicit questions path, including `participant_pack/questions.json`, and reports resolved input, corpus, sibling `answers_example.json` (if present), and output paths. It never modifies questions or reference examples.
 
 The CLI writes UTF-8 `answers.json` **beside the input file**, replacing any prior output there. Root `questions.json` produces root `answers.json`; the nested practice command produces `hackathon_participant_pack/participant_pack/answers.json`. A root copy of the practice output is not refreshed by the nested command.
 

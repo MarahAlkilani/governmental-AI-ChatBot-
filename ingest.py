@@ -2,11 +2,15 @@
 from __future__ import annotations
 
 import logging
+import os
 import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Optional, Tuple, Union
 
+
+from project_paths import (DOCUMENT_NAMES, active_document_directory,
+                           discover_questions, resolve_document_directory)
 
 logger = logging.getLogger(__name__)
 BASE_DIR = Path(__file__).resolve().parent
@@ -60,10 +64,16 @@ def _find_text_files(root: Path) -> List[Path]:
 
 
 def _default_data_dir() -> Path:
-    participant_pack = BASE_DIR / "hackathon_participant_pack"
-    if _find_text_files(participant_pack):
-        return participant_pack
-    return BASE_DIR / "data"
+    active = active_document_directory()
+    if active is not None:
+        return active
+    if os.getenv("GOVERNMENT_RAG_DATA_DIR"):
+        return resolve_document_directory(base=BASE_DIR)
+    try:
+        questions = discover_questions(BASE_DIR)
+    except FileNotFoundError:
+        questions = None
+    return resolve_document_directory(questions, base=BASE_DIR)
 
 
 def _service_name(text: str) -> Optional[str]:
@@ -129,7 +139,9 @@ def load_documents(
         return []
 
     documents: List[DocumentRecord] = []
-    for path in _find_text_files(root):
+    paths = (_find_text_files(root) if data_dir is not None
+             else [root / name for name in DOCUMENT_NAMES])
+    for path in paths:
         try:
             with path.open("r", encoding="utf-8", newline="") as source:
                 text = source.read()
