@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Arabic Government Services RAG
 
 AI Hackathon project built by a team of three.
@@ -8,3 +9,6 @@ local Ollama, document retrieval, and source citations.
 
 ## Evaluation
 python main.py questions.json
+=======
+# governmental-AI-ChatBot-
+>>>>>>> origin/main
